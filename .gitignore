@@ -7,3 +7,4 @@ npm-debug.log*
 .DS_Store
 scripts/data/*.xlsx
 !scripts/data/.gitkeep
+tsconfig.tsbuildinfo
