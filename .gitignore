@@ -8,3 +8,6 @@ npm-debug.log*
 scripts/data/*.xlsx
 !scripts/data/.gitkeep
 tsconfig.tsbuildinfo
+
+.vercel
+.env*

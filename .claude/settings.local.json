@@ -155,7 +155,11 @@
       "Bash(node -r ts-node/register scripts/_d3.ts)",
       "Bash(rm -f scripts/_d1.ts scripts/_d2.ts scripts/_d3.ts)",
       "Bash(node_modules/.bin/tsx scripts/seed.ts)",
-      "Bash(rm -rf .next)"
+      "Bash(rm -rf .next)",
+      "mcp__claude-in-chrome__tabs_create_mcp",
+      "Bash(git config *)",
+      "Bash(awk -F= '{print $1\"=\"length\\($2\\)\" chars, starts with: \"substr\\($2,1,15\\)}')",
+      "Bash(rm -f /tmp/dev-env-check.txt)"
     ]
   }
 }

@@ -48,3 +48,5 @@ Visit http://localhost:3000.
 Once live, use the "⬆ Upload Report" button in the header to drag in any new Encompass export:
 - **Closed loans** (`Data` sheet) are additive — duplicates (same funding date + LO + borrower last name + amount) are automatically skipped, only net-new rows are inserted.
 - **Pipeline** (`Table` sheet) is always fully replaced with the latest snapshot on every upload.
+
+> Note: pipeline rows stuck in a non-`Completion` milestone with a `Date File Started` before `2026-01-01` (see `STALE_PIPELINE_CUTOFF_DATE` in `lib/dataUtils.ts`) are treated as abandoned/stalled files and are excluded on every seed/upload — they never progressed and would otherwise inflate the Active Pipeline count. Update that constant if the business wants a different cutoff.

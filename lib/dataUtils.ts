@@ -164,6 +164,18 @@ export function parseClosedLoanRow(row: RawEncompassRow) {
   return { ...fields, funding_close_date, unique_key, isClosed: isClosedLoanRow(fields) }
 }
 
+// Pipeline loans stuck in a non-Completion milestone since before this cutoff are treated as
+// abandoned/stalled files, not real active pipeline — excluded on every seed/upload.
+export const STALE_PIPELINE_CUTOFF_DATE = '2026-01-01'
+
+export function isStalePipelineRow(fields: Pick<ParsedLoanFields, 'current_milestone' | 'date_file_started'>): boolean {
+  return (
+    fields.current_milestone !== 'Completion' &&
+    fields.date_file_started !== null &&
+    fields.date_file_started < STALE_PIPELINE_CUTOFF_DATE
+  )
+}
+
 // ---------- Formatting ----------
 
 const numberFmt = new Intl.NumberFormat('en-US')
