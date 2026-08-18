@@ -159,7 +159,23 @@
       "mcp__claude-in-chrome__tabs_create_mcp",
       "Bash(git config *)",
       "Bash(awk -F= '{print $1\"=\"length\\($2\\)\" chars, starts with: \"substr\\($2,1,15\\)}')",
-      "Bash(rm -f /tmp/dev-env-check.txt)"
+      "Bash(rm -f /tmp/dev-env-check.txt)",
+      "Bash(curl -s \"https://peak-finance-dashboard.vercel.app/api/dashboard?datePreset=YTD\")",
+      "Bash(curl -s \"http://localhost:3000/api/dashboard?datePreset=MTD\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('MTD totalFiles:',j.kpis?.totalFiles,'error:',j.error\\)}\\)\")",
+      "Bash(curl -s \"http://localhost:3000/api/dashboard?datePreset=YTD\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('YTD totalFiles:',j.kpis?.totalFiles,'error:',j.error\\)}\\)\")",
+      "Bash(curl -s \"http://localhost:3000/api/dashboard?datePreset=ALL\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('ALL totalFiles:',j.kpis?.totalFiles,'error:',j.error\\)}\\)\")",
+      "Bash(node inspect_financials.js)",
+      "Bash(node inspect_financials2.js)",
+      "Bash(node inspect_financials3.js)",
+      "Bash(curl -s \"http://localhost:3000/api/pipeline?datePreset=MTD\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('MTD totalOpenLoans:',j.kpis?.totalOpenLoans,'error:',j.error\\)}\\)\")",
+      "Bash(curl -s \"http://localhost:3000/api/pipeline?datePreset=YTD\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('YTD totalOpenLoans:',j.kpis?.totalOpenLoans,'error:',j.error\\)}\\)\")",
+      "Bash(curl -s \"http://localhost:3000/api/pipeline?datePreset=ALL\")",
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('ALL totalOpenLoans:',j.kpis?.totalOpenLoans,'error:',j.error\\)}\\)\")"
     ]
   }
 }
