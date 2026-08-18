@@ -13,12 +13,14 @@ import { OverviewTab } from '@/components/overview/OverviewTab'
 import { ProductionTab } from '@/components/production/ProductionTab'
 import { PipelineTab } from '@/components/pipeline/PipelineTab'
 import { ProjectionsTab } from '@/components/projections/ProjectionsTab'
+import { FinancialsTab } from '@/components/financials/FinancialsTab'
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'production', label: 'Production' },
   { key: 'pipeline', label: 'Pipeline' },
   { key: 'projections', label: 'Projections' },
+  { key: 'financials', label: 'Financials' },
 ] as const
 
 type TabKey = (typeof TABS)[number]['key']
@@ -86,6 +88,7 @@ export default function Page() {
         {tab === 'production' && <ProductionTab refreshKey={refreshKey} />}
         {tab === 'pipeline' && <PipelineTab refreshKey={refreshKey} />}
         {tab === 'projections' && <ProjectionsTab refreshKey={refreshKey} />}
+        {tab === 'financials' && <FinancialsTab refreshKey={refreshKey} />}
       </main>
 
       {uploadOpen && (
