@@ -6,7 +6,10 @@ import type { DashboardData } from '@/hooks/useDashboard'
 function DeltaBadge({ value }: { value: number }) {
   const positive = value >= 0
   return (
-    <span className={clsx('text-xs font-medium', positive ? 'text-success' : 'text-danger')}>
+    <span
+      className={clsx('text-xs font-medium', positive ? 'text-success' : 'text-danger')}
+      title="vs. the same period one year earlier"
+    >
       {positive ? '▲' : '▼'} {Math.abs(value).toFixed(1)}%
     </span>
   )
