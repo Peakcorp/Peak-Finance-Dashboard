@@ -4,6 +4,10 @@ import { searchParamsToFilters, resolvedDateRange } from '@/lib/filterUtils'
 import { withErrorHandling } from '@/lib/apiHandler'
 import { fetchAllRows } from '@/lib/fetchAllRows'
 
+// This route joins and aggregates the full gl_transactions table in memory (now 36k+ rows
+// spanning 2019-2025), which comfortably exceeds Vercel's default 10s function timeout.
+export const maxDuration = 60
+
 interface JoinedClosedLoan {
   id: string
   loan_officer: string | null

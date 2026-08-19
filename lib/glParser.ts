@@ -30,7 +30,7 @@ const ACCOUNT_HEADER_RE = /^(\d{4}-\d{4})\s*-\s*(.+?)\s*\(Balance forward/i
 const TOTALS_ROW_RE = /^Totals for\s/i
 
 function categorize(code: string): GLCategory {
-  if (code.startsWith('40') || code.startsWith('41') || code.startsWith('42')) return 'revenue'
+  if (code.startsWith('40') || code.startsWith('41') || code.startsWith('42') || code.startsWith('70')) return 'revenue'
   if (code.startsWith('50') || code.startsWith('51')) return 'direct_expense'
   return 'overhead'
 }
@@ -83,11 +83,9 @@ export function extractLoanRef(memo: string | null): {
   return { loanNumber, borrowerLastName, propertyAddress }
 }
 
-export function parseGLWorkbook(buffer: Buffer): ParsedGLWorkbook {
-  const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true })
-  const ws = wb.Sheets[wb.SheetNames[0]]
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null })
-
+// Original raw export: account-header rows ("4010-0005 - Name (Balance forward As of ...)")
+// interleaved with transaction rows and "Totals for ..." footer rows, 13 columns wide.
+function parseRawFormat(rows: unknown[][]): ParsedGLWorkbook {
   let periodStart: string | null = null
   let periodEnd: string | null = null
   for (const row of rows.slice(0, 7)) {
@@ -154,4 +152,83 @@ export function parseGLWorkbook(buffer: Buffer): ParsedGLWorkbook {
   }))
 
   return { periodStart, periodEnd, transactions, accountSummary }
+}
+
+// Pre-cleaned export: a flat "Transactions" sheet, one row per transaction, no header/totals
+// rows to skip — columns: Account, GL Code, Posted Date, Doc Date, Memo/Description, Debit, Credit.
+function parseFlatFormat(rows: unknown[][]): ParsedGLWorkbook {
+  const transactions: ParsedGLTransaction[] = []
+  const accountCounts = new Map<string, { name: string; category: GLCategory; count: number }>()
+  let minDate: string | null = null
+  let maxDate: string | null = null
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i]
+    if (!row || row.every((c) => c === null || c === undefined)) continue
+
+    const name = (row[0] as string | null) ?? null
+    const code = (row[1] as string | null) ?? null
+    if (!code || !name) continue
+
+    const category = categorize(code)
+    if (!accountCounts.has(code)) accountCounts.set(code, { name, category, count: 0 })
+
+    const postedDate = toDateString(row[2])
+    const memo = (row[4] as string | null) ?? null
+    const debit = toNumber(row[5])
+    const credit = toNumber(row[6])
+    const amount = category === 'revenue' ? (credit ?? 0) - (debit ?? 0) : (debit ?? 0) - (credit ?? 0)
+    const { loanNumber, borrowerLastName, propertyAddress } = extractLoanRef(memo)
+
+    if (postedDate) {
+      if (!minDate || postedDate < minDate) minDate = postedDate
+      if (!maxDate || postedDate > maxDate) maxDate = postedDate
+    }
+
+    transactions.push({
+      postedDate,
+      docNumber: null,
+      memo,
+      vendorName: null,
+      className: null,
+      glAccountCode: code,
+      glAccountName: name,
+      glCategory: category,
+      debit,
+      credit,
+      amount,
+      loanNumberRef: loanNumber,
+      borrowerLastNameRef: borrowerLastName,
+      propertyAddressRef: propertyAddress,
+    })
+    accountCounts.get(code)!.count++
+  }
+
+  const accountSummary = Array.from(accountCounts.entries()).map(([code, v]) => ({
+    code,
+    name: v.name,
+    category: v.category,
+    count: v.count,
+  }))
+
+  return { periodStart: minDate, periodEnd: maxDate, transactions, accountSummary }
+}
+
+const FLAT_HEADER = ['Account', 'GL Code', 'Posted Date', 'Doc Date', 'Memo/Description', 'Debit', 'Credit']
+
+export function parseGLWorkbook(buffer: Buffer): ParsedGLWorkbook {
+  const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true })
+
+  const flatSheetName = wb.SheetNames.find((n) => n === 'Transactions')
+  if (flatSheetName) {
+    const ws = wb.Sheets[flatSheetName]
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null })
+    const header = (rows[0] ?? []).map((c) => (typeof c === 'string' ? c.trim() : c))
+    const looksFlat = FLAT_HEADER.every((h, i) => header[i] === h)
+    if (looksFlat) return parseFlatFormat(rows)
+  }
+
+  const ws = wb.Sheets[wb.SheetNames[0]]
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null })
+  return parseRawFormat(rows)
 }

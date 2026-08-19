@@ -34,15 +34,18 @@ async function fetchAllClosedLoans(supabase: any): Promise<ClosedLoan[]> {
 }
 
 async function main() {
-  const filePath = process.argv[2]
+  const args = process.argv.slice(2)
+  const dryRun = args.includes('--dry-run')
+  const filePath = args.find((a) => !a.startsWith('--'))
   if (!filePath) {
-    console.error('Usage: npx tsx scripts/import-financials.ts "<path-to-xlsx>"')
+    console.error('Usage: npx tsx scripts/import-financials.ts "<path-to-xlsx>" [--dry-run]')
     process.exit(1)
   }
   if (!fs.existsSync(filePath)) {
     console.error(`File not found: ${filePath}`)
     process.exit(1)
   }
+  if (dryRun) console.log('*** DRY RUN — no data will be written to the database ***\n')
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -66,7 +69,26 @@ async function main() {
   const closedLoans = await fetchAllClosedLoans(supabase)
   console.log(`Loaded ${closedLoans.length} closed loans.`)
 
-  const matched = matchTransactionsToLoans(parsed.transactions, closedLoans)
+  // GL entries dated before the earliest loan in the system can't be tied to any loan and
+  // would just be noise in the P&L (revenue/expense with nothing on the other side) — excluded
+  // wholesale, not just from matching. Cutoff is derived from the live data, not hand-picked.
+  const earliestCompletionDates = closedLoans
+    .map((l) => l.milestone_date_completion)
+    .filter((d): d is string => d !== null)
+    .sort()
+  const cutoffDate = earliestCompletionDates[0]
+  if (!cutoffDate) {
+    console.error('No closed loans with a completion date found — cannot compute a cutoff date.')
+    process.exit(1)
+  }
+  console.log(`\nEarliest closed loan completion date in the system: ${cutoffDate}`)
+
+  const beforeCutoff = parsed.transactions.filter((t) => !t.postedDate || t.postedDate < cutoffDate)
+  const inScope = parsed.transactions.filter((t) => t.postedDate && t.postedDate >= cutoffDate)
+  console.log(`Excluding ${beforeCutoff.length} transactions posted before ${cutoffDate} (or with no posted date).`)
+  console.log(`${inScope.length} transactions remain in scope for import.`)
+
+  const matched = matchTransactionsToLoans(inScope, closedLoans)
 
   const loanLinkable = matched.filter((t) => t.glCategory !== 'overhead')
   const matchedCount = loanLinkable.filter((t) => t.matchedClosedLoanId).length
@@ -87,18 +109,27 @@ async function main() {
 
   const categoryTotals = { revenue: 0, direct_expense: 0, overhead: 0 }
   for (const t of matched) categoryTotals[t.glCategory] += t.amount
-  console.log(`\n=== Category totals (should match the source GL) ===`)
+  console.log(`\n=== Category totals (should match the source GL, minus the excluded pre-cutoff rows) ===`)
   console.log(`Revenue: $${categoryTotals.revenue.toFixed(2)}`)
   console.log(`Direct expense: $${categoryTotals.direct_expense.toFixed(2)}`)
   console.log(`Overhead: $${categoryTotals.overhead.toFixed(2)}`)
   console.log(`Net (revenue - direct expense - overhead): $${(categoryTotals.revenue - categoryTotals.direct_expense - categoryTotals.overhead).toFixed(2)}`)
 
+  if (dryRun) {
+    console.log('\n*** DRY RUN — nothing was written. Re-run without --dry-run to import. ***')
+    return
+  }
+
+  const inScopeDates = inScope.map((t) => t.postedDate).filter((d): d is string => d !== null).sort()
+  const periodStart = inScopeDates[0] ?? cutoffDate
+  const periodEnd = inScopeDates[inScopeDates.length - 1] ?? cutoffDate
+
   const { data: upload, error: uploadErr } = await supabase
     .from('financials_uploads')
     .insert({
       filename: path.basename(filePath),
-      period_start: parsed.periodStart,
-      period_end: parsed.periodEnd,
+      period_start: periodStart,
+      period_end: periodEnd,
       uploaded_by: 'Import Script',
       transaction_count: matched.length,
       matched_count: matchedCount,
