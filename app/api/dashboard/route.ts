@@ -5,7 +5,7 @@ import {
   autoGranularity,
   bucketKey,
   bucketLabel,
-  getPriorPeriod,
+  getPriorYearPeriod,
   formatDelta,
   type Granularity,
 } from '@/lib/dataUtils'
@@ -32,7 +32,7 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
   })
   if (currentErr) return NextResponse.json({ error: currentErr.message }, { status: 500 })
 
-  const prior = getPriorPeriod(range.from, range.to)
+  const prior = getPriorYearPeriod(range.from, range.to)
   const { data: priorLoans } = await fetchAllRows<ClosedLoan>(() => {
     let q = supabaseServer.from('closed_loans').select('*')
     q = applyCommonFilters(q as any, filters) as any

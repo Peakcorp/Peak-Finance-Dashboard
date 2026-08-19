@@ -8,6 +8,7 @@ import {
   startOfQuarter,
   startOfYear,
   subDays,
+  subYears,
   differenceInCalendarDays,
 } from 'date-fns'
 
@@ -251,6 +252,7 @@ export function getPresetRange(preset: string): { from: string; to: string } {
 }
 
 // Given a date range, return the equivalent prior period of the same length
+// (kept for reference; KPI deltas use getPriorYearPeriod below instead)
 export function getPriorPeriod(from: string, to: string): { from: string; to: string } {
   const f = new Date(from + 'T00:00:00')
   const t = new Date(to + 'T00:00:00')
@@ -258,6 +260,14 @@ export function getPriorPeriod(from: string, to: string): { from: string; to: st
   const priorTo = subDays(f, 1)
   const priorFrom = subDays(priorTo, lengthDays - 1)
   return { from: format(priorFrom, 'yyyy-MM-dd'), to: format(priorTo, 'yyyy-MM-dd') }
+}
+
+// Same calendar period, one year earlier — e.g. YTD (Jan 1-today) compares against
+// Jan 1-today of last year, not an arbitrary trailing window. Used for KPI deltas.
+export function getPriorYearPeriod(from: string, to: string): { from: string; to: string } {
+  const f = new Date(from + 'T00:00:00')
+  const t = new Date(to + 'T00:00:00')
+  return { from: format(subYears(f, 1), 'yyyy-MM-dd'), to: format(subYears(t, 1), 'yyyy-MM-dd') }
 }
 
 export type Granularity = 'daily' | 'weekly' | 'monthly' | 'yearly'
