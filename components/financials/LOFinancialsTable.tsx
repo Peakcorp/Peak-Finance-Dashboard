@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { formatCurrency, formatNumber } from '@/lib/dataUtils'
 import { exportToCsv } from '@/lib/csvExport'
 import { SkeletonTable } from '@/components/shared/Skeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { LoanFinancialsDetail } from './LoanFinancialsDetail'
 import type { LOFinancials } from '@/hooks/useFinancials'
 
 type SortKey = 'filesClosed' | 'revenue' | 'directExpense' | 'netLoanProfit'
@@ -12,6 +13,7 @@ type SortKey = 'filesClosed' | 'revenue' | 'directExpense' | 'netLoanProfit'
 export function LOFinancialsTable({ rows, loading }: { rows: LOFinancials[] | null; loading: boolean }) {
   const [sortKey, setSortKey] = useState<SortKey>('netLoanProfit')
   const [desc, setDesc] = useState(true)
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   const data = rows ?? []
   const sorted = useMemo(() => [...data].sort((a, b) => (desc ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey])), [data, sortKey, desc])
@@ -60,14 +62,25 @@ export function LOFinancialsTable({ rows, loading }: { rows: LOFinancials[] | nu
           </thead>
           <tbody>
             {sorted.map((r) => (
-              <tr key={r.loanOfficer} className="border-b border-slate-100">
-                <td className="py-2 pr-4 font-medium">{r.loanOfficer}</td>
-                {columns.map((c) => (
-                  <td key={c.key} className="py-2 pr-4">
-                    {c.fmt(r[c.key])}
+              <React.Fragment key={r.loanOfficer}>
+                <tr
+                  className="cursor-pointer border-b border-slate-100 hover:bg-surface-subtle"
+                  onClick={() => setExpanded(expanded === r.loanOfficer ? null : r.loanOfficer)}
+                >
+                  <td className="py-2 pr-4 font-medium">
+                    <span className="mr-1 text-ink-faint">{expanded === r.loanOfficer ? '▾' : '▸'}</span>
+                    {r.loanOfficer}
                   </td>
-                ))}
-              </tr>
+                  {columns.map((c) => (
+                    <td key={c.key} className="py-2 pr-4">
+                      {c.fmt(r[c.key])}
+                    </td>
+                  ))}
+                </tr>
+                {expanded === r.loanOfficer && (
+                  <LoanFinancialsDetail loanOfficer={r.loanOfficer} loans={r.loans} colSpan={columns.length + 1} />
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>

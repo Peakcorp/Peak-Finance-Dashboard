@@ -4,12 +4,27 @@ import { useEffect, useState } from 'react'
 import { useFilterStore } from '@/store/filterStore'
 import { filtersToSearchParams } from '@/lib/filterUtils'
 
+export interface LoanFinancials {
+  loanId: string
+  borrowerLastName: string | null
+  borrowerFirstName: string | null
+  propertyAddress: string | null
+  propertyCity: string | null
+  propertyState: string | null
+  loanAmount: number | null
+  closedDate: string | null
+  revenue: number
+  directExpense: number
+  netLoanProfit: number
+}
+
 export interface LOFinancials {
   loanOfficer: string
   filesClosed: number
   revenue: number
   directExpense: number
   netLoanProfit: number
+  loans: LoanFinancials[]
 }
 
 export interface UnmatchedTransaction {

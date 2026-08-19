@@ -177,7 +177,8 @@
       "Bash(curl -s \"http://localhost:3000/api/pipeline?datePreset=ALL\")",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('ALL totalOpenLoans:',j.kpis?.totalOpenLoans,'error:',j.error\\)}\\)\")",
       "Bash(npx tsx *)",
-      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('totalVolume:',j.kpis?.totalVolume,'delta:',j.kpis?.totalVolumeDelta, 'error:', j.error\\)}\\)\")"
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\);process.stdin.on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);console.log\\('totalVolume:',j.kpis?.totalVolume,'delta:',j.kpis?.totalVolumeDelta, 'error:', j.error\\)}\\)\")",
+      "Bash(curl -s \"http://localhost:3000/api/financials?datePreset=YTD\")"
     ]
   }
 }

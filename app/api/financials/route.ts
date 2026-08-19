@@ -8,8 +8,12 @@ interface JoinedClosedLoan {
   id: string
   loan_officer: string | null
   loan_processor: string | null
+  borrower_first_name: string | null
+  borrower_last_name: string | null
+  property_address: string | null
   property_state: string | null
   property_city: string | null
+  loan_amount: number | null
   loan_type: string | null
   loan_channel: string | null
   milestone_date_completion: string | null
@@ -39,7 +43,7 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
     supabaseServer
       .from('gl_transactions')
       .select(
-        '*, closed_loans(id, loan_officer, loan_processor, property_state, property_city, loan_type, loan_channel, milestone_date_completion)',
+        '*, closed_loans(id, loan_officer, loan_processor, borrower_first_name, borrower_last_name, property_address, property_state, property_city, loan_amount, loan_type, loan_channel, milestone_date_completion)',
       ) as any,
   )
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -72,24 +76,55 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
   const unmatchedInScope = dated.filter((r) => !r.matched_closed_loan_id && r.gl_category !== 'overhead')
   const overheadInScope = dated.filter((r) => r.gl_category === 'overhead')
 
-  // ---------- Per-LO rollup ----------
-  const byLO = new Map<string, { loanIds: Set<string>; revenue: number; directExpense: number }>()
+  // ---------- Per-loan rollup (also the basis for the per-LO rollup below) ----------
+  interface LoanAccum {
+    loan: JoinedClosedLoan
+    revenue: number
+    directExpense: number
+  }
+  const byLoan = new Map<string, LoanAccum>()
   for (const r of matchedInScope) {
-    const lo = r.closed_loans!.loan_officer ?? 'Unassigned'
-    if (!byLO.has(lo)) byLO.set(lo, { loanIds: new Set(), revenue: 0, directExpense: 0 })
-    const entry = byLO.get(lo)!
-    entry.loanIds.add(r.matched_closed_loan_id!)
+    const loanId = r.matched_closed_loan_id!
+    if (!byLoan.has(loanId)) byLoan.set(loanId, { loan: r.closed_loans!, revenue: 0, directExpense: 0 })
+    const entry = byLoan.get(loanId)!
     if (r.gl_category === 'revenue') entry.revenue += r.amount
     else if (r.gl_category === 'direct_expense') entry.directExpense += r.amount
   }
+  const loanFinancials = Array.from(byLoan.values()).map((v) => ({
+    loanId: v.loan.id,
+    borrowerLastName: v.loan.borrower_last_name,
+    borrowerFirstName: v.loan.borrower_first_name,
+    propertyAddress: v.loan.property_address,
+    propertyCity: v.loan.property_city,
+    propertyState: v.loan.property_state,
+    loanAmount: v.loan.loan_amount,
+    closedDate: v.loan.milestone_date_completion,
+    revenue: v.revenue,
+    directExpense: v.directExpense,
+    netLoanProfit: v.revenue - v.directExpense,
+  }))
+
+  // ---------- Per-LO rollup ----------
+  const byLO = new Map<string, { loans: typeof loanFinancials }>()
+  for (const loan of loanFinancials) {
+    const lo = byLoan.get(loan.loanId)!.loan.loan_officer ?? 'Unassigned'
+    if (!byLO.has(lo)) byLO.set(lo, { loans: [] })
+    byLO.get(lo)!.loans.push(loan)
+  }
   const byLoanOfficer = Array.from(byLO.entries())
-    .map(([loanOfficer, v]) => ({
-      loanOfficer,
-      filesClosed: v.loanIds.size,
-      revenue: v.revenue,
-      directExpense: v.directExpense,
-      netLoanProfit: v.revenue - v.directExpense,
-    }))
+    .map(([loanOfficer, v]) => {
+      const loans = v.loans.slice().sort((a, b) => b.netLoanProfit - a.netLoanProfit)
+      const revenue = loans.reduce((s, l) => s + l.revenue, 0)
+      const directExpense = loans.reduce((s, l) => s + l.directExpense, 0)
+      return {
+        loanOfficer,
+        filesClosed: loans.length,
+        revenue,
+        directExpense,
+        netLoanProfit: revenue - directExpense,
+        loans,
+      }
+    })
     .sort((a, b) => b.netLoanProfit - a.netLoanProfit)
 
   const matchedRevenue = matchedInScope.filter((r) => r.gl_category === 'revenue').reduce((s, r) => s + r.amount, 0)
