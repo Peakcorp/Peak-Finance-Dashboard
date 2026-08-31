@@ -23,9 +23,16 @@ export function useFilters() {
 
   useEffect(() => {
     if (!hydrated) return
-    const params = filtersToSearchParams(filters)
-    const qs = params.toString()
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    // Debounced: two filter changes in quick succession (e.g. typing both ends of a custom
+    // date range) each fire their own router.replace() — if those race, the one that lands
+    // second can reflect an in-between state and silently drop the other field. Coalescing
+    // into one replace() per settled state avoids that regardless of how fast the changes land.
+    const timeout = setTimeout(() => {
+      const params = filtersToSearchParams(filters)
+      const qs = params.toString()
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    }, 300)
+    return () => clearTimeout(timeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, hydrated])
 
