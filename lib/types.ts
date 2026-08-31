@@ -97,8 +97,11 @@ export interface ProjectionMonthNote {
   updated_at: string
 }
 
-// Milestone funnel — canonical order, early -> funded
+// Milestone funnel — canonical order, early -> funded. Completion is excluded: a
+// Completion-milestone loan is effectively closed and is never present in pipeline_loans
+// (see shouldExcludeFromPipeline in lib/dataUtils.ts) — showing it here would always read 0.
 export const MILESTONE_ORDER = [
+  'Started',
   'Application',
   'Processing',
   'Submittal',
@@ -111,7 +114,6 @@ export const MILESTONE_ORDER = [
   'Funding',
   'Shipping',
   'Purchasing',
-  'Completion',
 ] as const
 
 export type Milestone = (typeof MILESTONE_ORDER)[number]
