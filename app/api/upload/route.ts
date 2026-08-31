@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import { supabaseServer } from '@/lib/supabase-server'
-import { parseClosedLoanRow, parseLoanRow, isStalePipelineRow, type RawEncompassRow } from '@/lib/dataUtils'
+import { parseClosedLoanRow, parseLoanRow, shouldExcludeFromPipeline, type RawEncompassRow } from '@/lib/dataUtils'
 import type { UploadApiResponse } from '@/lib/types'
 import { withErrorHandling } from '@/lib/apiHandler'
 
@@ -83,7 +83,7 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
     const rawRows = XLSX.utils.sheet_to_json<RawEncompassRow>(tableSheet, { defval: null })
     const pipelineRows = rawRows
       .map((r) => parseLoanRow(r))
-      .filter((r) => !isStalePipelineRow(r))
+      .filter((r) => !shouldExcludeFromPipeline(r))
       .map((r) => ({ ...r, upload_id: upload.id }))
     pipelineCount = pipelineRows.length
 
