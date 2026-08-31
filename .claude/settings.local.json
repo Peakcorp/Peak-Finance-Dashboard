@@ -188,7 +188,17 @@
       "Bash(curl -sv \"http://localhost:3000/api/financials?datePreset=ALL\" -o /tmp/fin_response.json)",
       "Bash(time curl -s \"http://localhost:3000/api/financials?datePreset=ALL\" -o /tmp/fin_response.json)",
       "Bash(time curl -s \"http://localhost:3000/api/financials?datePreset=ALL\" -o /tmp/fin_response2.json)",
-      "Bash(time curl -s \"http://localhost:3000/api/financials?datePreset=ALL\" -o /tmp/fin_response3.json -w \"HTTP: %{http_code}\\\\n\")"
+      "Bash(time curl -s \"http://localhost:3000/api/financials?datePreset=ALL\" -o /tmp/fin_response3.json -w \"HTTP: %{http_code}\\\\n\")",
+      "Bash(time curl -s \"https://peak-finance-dashboard-git-financial-004b9f-peak-corps-projects.vercel.app/api/financials?datePreset=ALL\" -o /tmp/prod_fin_check.json -w \"HTTP: %{http_code}\\\\n\")",
+      "Bash(node inspect_gl4.js)",
+      "Bash(cp \"/c/Users/Abol/AppData/Local/Temp/claude/C--Users-Abol-Downloads-CSLB---Claude/403f477c-67de-42cc-87ab-0ef9fef62645/scratchpad/inspect/inspect_gl4.js\" \"/c/Users/Abol/Downloads/CSLB - Claude/scripts/_inspect_gl4.js\")",
+      "Bash(node scripts/_inspect_gl4.js)",
+      "Bash(node scripts/_inspect_gl5.js)",
+      "Bash(node scripts/_reconcile_overlap.js)",
+      "mcp__claude-in-chrome__tabs_close_mcp",
+      "Bash(node_modules/.bin/tsx scripts/_test_parser.ts)",
+      "Bash(node_modules/.bin/tsx scripts/import-financials.ts \"C:\\\\Users\\\\Abol\\\\Downloads\\\\Peak Finance - Projection and Dashboard Information\\\\Financials\\\\General_Ledger_report_flat - 8.27.2026.csv\" --dry-run)",
+      "Bash(curl -s \"http://localhost:3000/api/financials?datePreset=ALL\" -o /tmp/fin_check.json -w \"HTTP: %{http_code}\\\\n\")"
     ]
   }
 }

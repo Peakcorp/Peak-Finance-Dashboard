@@ -39,6 +39,14 @@ create table if not exists gl_transactions (
   property_address_ref text,
   matched_closed_loan_id uuid references closed_loans(id) on delete set null,
   match_confidence text check (match_confidence in ('high', 'medium', 'low')),
+  -- Branch dimension, from the GL's "Location" column. 10201 = Woodland Hills, 10202 = Las
+  -- Vegas, 102 = Bridgelock Capital (parent entity) -> treated as an unallocated corporate cost.
+  location_code text,
+  branch text check (branch in ('Woodland Hills', 'Las Vegas', 'Corporate')),
+  -- Vendor-based MSA attribution (e.g. "Our Legacy Corporation" -> Alma Pulido): a recurring
+  -- rent/marketing bill tied to a specific loan officer's branch arrangement, independent of
+  -- (and in addition to) the loan-matching above, since these bills reference no specific loan.
+  msa_loan_officer text,
   created_at timestamptz default now()
 );
 
@@ -46,6 +54,13 @@ create index if not exists idx_gl_transactions_upload on gl_transactions(upload_
 create index if not exists idx_gl_transactions_matched_loan on gl_transactions(matched_closed_loan_id);
 create index if not exists idx_gl_transactions_category on gl_transactions(gl_category);
 create index if not exists idx_gl_transactions_posted_date on gl_transactions(posted_date);
+create index if not exists idx_gl_transactions_branch on gl_transactions(branch);
+
+-- Additive migration for a database that already has the table from before the branch/MSA columns existed:
+alter table gl_transactions add column if not exists location_code text;
+alter table gl_transactions add column if not exists branch text check (branch in ('Woodland Hills', 'Las Vegas', 'Corporate'));
+alter table gl_transactions add column if not exists msa_loan_officer text;
+create index if not exists idx_gl_transactions_branch on gl_transactions(branch);
 
 alter table financials_uploads enable row level security;
 alter table gl_transactions enable row level security;

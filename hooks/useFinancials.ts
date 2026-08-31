@@ -24,7 +24,18 @@ export interface LOFinancials {
   revenue: number
   directExpense: number
   netLoanProfit: number
+  // Recurring rent/marketing tied to the LO's own MSA entity (e.g. Alma <-> Our Legacy
+  // Corporation) — not loan-linked, so kept separate from directExpense/netLoanProfit above.
+  msaCost: number
   loans: LoanFinancials[]
+}
+
+export interface BranchFinancials {
+  branch: 'Woodland Hills' | 'Las Vegas' | 'Corporate'
+  revenue: number
+  directExpense: number
+  overhead: number
+  netProfit: number
 }
 
 export interface UnmatchedTransaction {
@@ -40,6 +51,7 @@ export interface UnmatchedTransaction {
 export interface FinancialsData {
   period: { from: string; to: string }
   byLoanOfficer: LOFinancials[]
+  byBranch: BranchFinancials[]
   totals: {
     matchedRevenue: number
     matchedDirectExpense: number

@@ -8,7 +8,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { LoanFinancialsDetail } from './LoanFinancialsDetail'
 import type { LOFinancials } from '@/hooks/useFinancials'
 
-type SortKey = 'filesClosed' | 'revenue' | 'directExpense' | 'netLoanProfit'
+type SortKey = 'filesClosed' | 'revenue' | 'directExpense' | 'netLoanProfit' | 'msaCost'
 
 export function LOFinancialsTable({ rows, loading }: { rows: LOFinancials[] | null; loading: boolean }) {
   const [sortKey, setSortKey] = useState<SortKey>('netLoanProfit')
@@ -34,6 +34,7 @@ export function LOFinancialsTable({ rows, loading }: { rows: LOFinancials[] | nu
     { key: 'revenue', label: 'Revenue', fmt: formatCurrency },
     { key: 'directExpense', label: 'Direct Expense', fmt: formatCurrency },
     { key: 'netLoanProfit', label: 'Net Loan Profit', fmt: formatCurrency },
+    { key: 'msaCost', label: 'MSA Cost', fmt: (n) => (n ? formatCurrency(n) : '—') },
   ]
 
   return (
@@ -46,7 +47,9 @@ export function LOFinancialsTable({ rows, loading }: { rows: LOFinancials[] | nu
       </div>
       <p className="mb-2 text-xs text-ink-faint">
         Direct Expense combines commission and all other per-loan costs (credit report, appraisal, underwriting, etc.) as reported in the
-        general ledger — it is not split between loan officer and processor.
+        general ledger — it is not split between loan officer and processor. MSA Cost is a recurring rent/marketing bill tied to that loan
+        officer's own branded entity (e.g. Alma / Our Legacy Corporation) — not loan-linked, so it's kept separate and excluded from Net
+        Loan Profit above.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

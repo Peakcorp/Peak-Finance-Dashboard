@@ -3,6 +3,7 @@
 import { useFinancials } from '@/hooks/useFinancials'
 import { FinancialsKPIs } from './FinancialsKPIs'
 import { LOFinancialsTable } from './LOFinancialsTable'
+import { BranchTable } from './BranchTable'
 import { UnmatchedPanel } from './UnmatchedPanel'
 
 export function FinancialsTab({ refreshKey }: { refreshKey: number }) {
@@ -25,6 +26,7 @@ export function FinancialsTab({ refreshKey }: { refreshKey: number }) {
       )}
 
       <FinancialsKPIs data={data} loading={loading} />
+      <BranchTable rows={data?.byBranch ?? null} loading={loading} />
       <LOFinancialsTable rows={data?.byLoanOfficer ?? null} loading={loading} />
       {data && <UnmatchedPanel transactions={data.unmatchedTransactions} matchStats={data.matchStats} />}
     </div>

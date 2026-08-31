@@ -36,9 +36,10 @@ async function fetchAllClosedLoans(supabase: any): Promise<ClosedLoan[]> {
 async function main() {
   const args = process.argv.slice(2)
   const dryRun = args.includes('--dry-run')
+  const replaceAll = args.includes('--replace-all')
   const filePath = args.find((a) => !a.startsWith('--'))
   if (!filePath) {
-    console.error('Usage: npx tsx scripts/import-financials.ts "<path-to-xlsx>" [--dry-run]')
+    console.error('Usage: npx tsx scripts/import-financials.ts "<path-to-xlsx>" [--dry-run] [--replace-all]')
     process.exit(1)
   }
   if (!fs.existsSync(filePath)) {
@@ -115,9 +116,34 @@ async function main() {
   console.log(`Overhead: $${categoryTotals.overhead.toFixed(2)}`)
   console.log(`Net (revenue - direct expense - overhead): $${(categoryTotals.revenue - categoryTotals.direct_expense - categoryTotals.overhead).toFixed(2)}`)
 
+  const branchCounts = new Map<string, number>()
+  for (const t of matched) { const b = t.branch ?? '(none)'; branchCounts.set(b, (branchCounts.get(b) ?? 0) + 1) }
+  console.log(`\n=== Branch distribution ===`)
+  for (const [b, c] of branchCounts) console.log(`  ${b}: ${c} rows`)
+
+  const msaCounts = new Map<string, number>()
+  for (const t of matched) { if (t.msaLoanOfficer) msaCounts.set(t.msaLoanOfficer, (msaCounts.get(t.msaLoanOfficer) ?? 0) + 1) }
+  console.log(`\n=== MSA-attributed transactions ===`)
+  for (const [lo, c] of msaCounts) console.log(`  ${lo}: ${c} rows`)
+
   if (dryRun) {
     console.log('\n*** DRY RUN — nothing was written. Re-run without --dry-run to import. ***')
     return
+  }
+
+  if (replaceAll) {
+    console.log('\n*** --replace-all: clearing existing financials_uploads and gl_transactions ***')
+    const { error: delTxErr } = await supabase.from('gl_transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    if (delTxErr) {
+      console.error('Failed to clear gl_transactions:', delTxErr)
+      process.exit(1)
+    }
+    const { error: delUpErr } = await supabase.from('financials_uploads').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    if (delUpErr) {
+      console.error('Failed to clear financials_uploads:', delUpErr)
+      process.exit(1)
+    }
+    console.log('Cleared.')
   }
 
   const inScopeDates = inScope.map((t) => t.postedDate).filter((d): d is string => d !== null).sort()
@@ -160,6 +186,9 @@ async function main() {
     property_address_ref: t.propertyAddressRef,
     matched_closed_loan_id: t.matchedClosedLoanId,
     match_confidence: t.matchConfidence,
+    location_code: t.locationCode,
+    branch: t.branch,
+    msa_loan_officer: t.msaLoanOfficer,
   }))
 
   const numBatches = Math.ceil(rows.length / BATCH_SIZE)

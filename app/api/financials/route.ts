@@ -35,6 +35,8 @@ interface GLRow {
   property_address_ref: string | null
   matched_closed_loan_id: string | null
   match_confidence: string | null
+  branch: 'Woodland Hills' | 'Las Vegas' | 'Corporate' | null
+  msa_loan_officer: string | null
   closed_loans: JoinedClosedLoan | null
 }
 
@@ -49,6 +51,7 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
       .select(
         '*, closed_loans(id, loan_officer, loan_processor, borrower_first_name, borrower_last_name, property_address, property_state, property_city, loan_amount, loan_type, loan_channel, milestone_date_completion)',
       ) as any,
+    // ^ select('*') already includes branch / msa_loan_officer once those columns exist
   )
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
@@ -79,6 +82,27 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
   const matchedInScope = dated.filter((r) => r.matched_closed_loan_id && r.closed_loans && matchesCategoryFilters(r.closed_loans))
   const unmatchedInScope = dated.filter((r) => !r.matched_closed_loan_id && r.gl_category !== 'overhead')
   const overheadInScope = dated.filter((r) => r.gl_category === 'overhead')
+
+  // ---------- Branch rollup ----------
+  // Every transaction carries its own branch (from the GL's Location column) independent of
+  // loan-matching or the LO/processor/state filters — Corporate (102) is an unallocated
+  // company-level cost, never split between the two real branches.
+  const BRANCHES = ['Woodland Hills', 'Las Vegas', 'Corporate'] as const
+  const byBranch = BRANCHES.map((branch) => {
+    const rows = dated.filter((r) => r.branch === branch)
+    const revenue = rows.filter((r) => r.gl_category === 'revenue').reduce((s, r) => s + r.amount, 0)
+    const directExpense = rows.filter((r) => r.gl_category === 'direct_expense').reduce((s, r) => s + r.amount, 0)
+    const overhead = rows.filter((r) => r.gl_category === 'overhead').reduce((s, r) => s + r.amount, 0)
+    return { branch, revenue, directExpense, overhead, netProfit: revenue - directExpense - overhead }
+  })
+
+  // ---------- MSA costs (recurring rent/marketing tied to a specific LO's branded entity) ----------
+  // Not loan-linked, so kept as its own line rather than folded into loan-driven Direct Expense.
+  const msaByLO = new Map<string, number>()
+  for (const r of dated) {
+    if (!r.msa_loan_officer) continue
+    msaByLO.set(r.msa_loan_officer, (msaByLO.get(r.msa_loan_officer) ?? 0) + r.amount)
+  }
 
   // ---------- Per-loan rollup (also the basis for the per-LO rollup below) ----------
   interface LoanAccum {
@@ -115,6 +139,11 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
     if (!byLO.has(lo)) byLO.set(lo, { loans: [] })
     byLO.get(lo)!.loans.push(loan)
   }
+  // Make sure an LO with MSA costs but no matched loans this period (e.g. filtered to a month
+  // with no closings) still gets a row, rather than their MSA cost silently having nowhere to show.
+  for (const lo of msaByLO.keys()) {
+    if (!byLO.has(lo)) byLO.set(lo, { loans: [] })
+  }
   const byLoanOfficer = Array.from(byLO.entries())
     .map(([loanOfficer, v]) => {
       const loans = v.loans.slice().sort((a, b) => b.netLoanProfit - a.netLoanProfit)
@@ -126,6 +155,7 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
         revenue,
         directExpense,
         netLoanProfit: revenue - directExpense,
+        msaCost: msaByLO.get(loanOfficer) ?? 0,
         loans,
       }
     })
@@ -173,6 +203,7 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
   return NextResponse.json({
     period: range,
     byLoanOfficer,
+    byBranch,
     totals,
     matchStats,
     unmatchedTransactions,
