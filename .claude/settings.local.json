@@ -198,7 +198,11 @@
       "mcp__claude-in-chrome__tabs_close_mcp",
       "Bash(node_modules/.bin/tsx scripts/_test_parser.ts)",
       "Bash(node_modules/.bin/tsx scripts/import-financials.ts \"C:\\\\Users\\\\Abol\\\\Downloads\\\\Peak Finance - Projection and Dashboard Information\\\\Financials\\\\General_Ledger_report_flat - 8.27.2026.csv\" --dry-run)",
-      "Bash(curl -s \"http://localhost:3000/api/financials?datePreset=ALL\" -o /tmp/fin_check.json -w \"HTTP: %{http_code}\\\\n\")"
+      "Bash(curl -s \"http://localhost:3000/api/financials?datePreset=ALL\" -o /tmp/fin_check.json -w \"HTTP: %{http_code}\\\\n\")",
+      "Bash(node_modules/.bin/tsx scripts/import-financials.ts \"C:\\\\Users\\\\Abol\\\\Downloads\\\\Peak Finance - Projection and Dashboard Information\\\\Financials\\\\General_Ledger_report_flat - 8.27.2026.csv\" --replace-all)",
+      "Bash(curl -s \"http://localhost:3000/api/financials?datePreset=ALL\" -o /tmp/fin_final.json -w \"HTTP: %{http_code}\\\\n\" --max-time 60)",
+      "Bash(curl -s \"https://peak-finance-dashboard-git-financial-004b9f-peak-corps-projects.vercel.app/api/financials?datePreset=ALL\" -o /tmp/prod_check.json -w \"HTTP: %{http_code}\\\\n\" --max-time 60)",
+      "Bash(curl -s \"http://localhost:3000/api/projections?datePreset=YTD\" --max-time 30)"
     ]
   }
 }

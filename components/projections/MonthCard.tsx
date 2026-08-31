@@ -15,6 +15,9 @@ export function MonthCard({ projection, isAuto, note, onSaveNote }: MonthCardPro
   const [expanded, setExpanded] = useState(false)
   const [noteDraft, setNoteDraft] = useState(note)
 
+  const closedCount = projection.loans.filter((l) => l.alreadyClosed).length
+  const pipelineCount = projection.loans.length - closedCount
+
   return (
     <div className="card flex flex-col">
       <h3 className="text-sm font-semibold text-ink">{projection.label}</h3>
@@ -27,13 +30,14 @@ export function MonthCard({ projection, isAuto, note, onSaveNote }: MonthCardPro
 
       <button onClick={() => setExpanded((e) => !e)} className="mt-3 text-left text-xs font-medium text-brand-700 hover:underline">
         {expanded ? 'Hide' : 'Show'} {projection.loans.length} qualifying loan{projection.loans.length === 1 ? '' : 's'}
+        {closedCount > 0 && ` (${closedCount} already closed, ${pipelineCount} still in pipeline)`}
       </button>
 
       {expanded && (
         <div className="mt-2 max-h-56 space-y-1.5 overflow-y-auto text-xs">
           {projection.loans.length === 0 && <p className="text-ink-faint">No qualifying loans this month.</p>}
           {projection.loans.map((l) => (
-            <div key={l.id} className="rounded border border-slate-100 p-1.5">
+            <div key={l.id} className={`rounded border p-1.5 ${l.alreadyClosed ? 'border-success/30 bg-success/5' : 'border-slate-100'}`}>
               <div className="flex justify-between font-medium">
                 <span className="truncate">
                   {l.borrower_last_name}, {l.borrower_first_name?.charAt(0)}.
@@ -42,9 +46,9 @@ export function MonthCard({ projection, isAuto, note, onSaveNote }: MonthCardPro
               </div>
               <div className="flex justify-between text-ink-faint">
                 <span className="truncate">
-                  {l.loan_officer} · {l.current_milestone}
+                  {l.loan_officer} · {l.alreadyClosed ? <span className="font-medium text-success">✓ Closed</span> : l.current_milestone}
                 </span>
-                {l.confidence !== null && <span>{l.confidence}%</span>}
+                {l.confidence !== null && !l.alreadyClosed && <span>{l.confidence}%</span>}
               </div>
               {l.notes && <p className="mt-0.5 text-ink-muted">{l.notes}</p>}
             </div>

@@ -48,8 +48,8 @@ export const GET = withErrorHandling(async (req: NextRequest) => {
 
   const monthProjections =
     settings.mode === 'auto_milestone'
-      ? computeAutoProjections(pipeline, settings, months, todayISO())
-      : computeManualProjections(pipeline, overrides, months)
+      ? computeAutoProjections(pipeline, closed, settings, months, todayISO())
+      : computeManualProjections(pipeline, closed, overrides, months)
 
   const loBreakdown = computeLOProjectionBreakdown(pipeline, monthProjections, months)
   const actualsVsProjected = computeActualsVsProjected(closed, monthProjections, 6, 4)
