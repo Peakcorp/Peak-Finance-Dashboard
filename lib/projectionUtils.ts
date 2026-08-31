@@ -12,6 +12,9 @@ export interface QualifyingLoan {
   est_closing_date: string | null
   confidence: number | null
   notes?: string | null
+  // Already funded/closed this month — guaranteed, not a projection at all. Counted at 100%
+  // regardless of milestone rules or the weight-by-confidence setting.
+  alreadyClosed?: boolean
 }
 
 export interface MonthProjection {
@@ -37,8 +40,38 @@ function isPast(dateStr: string, todayISO: string): boolean {
   return dateStr < todayISO
 }
 
+// A loan that already reached Completion within one of the displayed months is guaranteed
+// production for that month — not a projection, a fact. It's folded in at 100% confidence
+// regardless of milestone-inclusion rules or the weight-by-confidence toggle, in both auto and
+// manual mode. (In practice this only ever affects months[0], the current month in progress —
+// future months can't have a completion date yet, and past months aren't shown.)
+function foldInAlreadyClosedLoans(result: Record<string, MonthProjection>, closedLoans: ClosedLoan[], months: string[]) {
+  for (const loan of closedLoans) {
+    if (!loan.milestone_date_completion) continue
+    const mk = monthKey(loan.milestone_date_completion)
+    if (!months.includes(mk)) continue
+    const bucket = result[mk]
+    const amount = loan.loan_amount ?? 0
+    bucket.loans.push({
+      id: loan.id,
+      borrower_last_name: loan.borrower_last_name,
+      borrower_first_name: loan.borrower_first_name,
+      loan_officer: loan.loan_officer,
+      loan_amount: loan.loan_amount,
+      current_milestone: 'Completion',
+      est_closing_date: loan.milestone_date_completion,
+      confidence: 100,
+      alreadyClosed: true,
+    })
+    bucket.projectedFiles += 1
+    bucket.projectedVolume += amount
+    bucket.weightedVolume += amount
+  }
+}
+
 export function computeAutoProjections(
   pipelineLoans: PipelineLoan[],
+  closedLoans: ClosedLoan[],
   settings: ProjectionSettings,
   months: string[],
   todayISO: string,
@@ -47,6 +80,7 @@ export function computeAutoProjections(
   for (const m of months) {
     result[m] = { month: m, label: monthLabel(m), loans: [], projectedFiles: 0, projectedVolume: 0, weightedVolume: 0, avgConfidence: null }
   }
+  foldInAlreadyClosedLoans(result, closedLoans, months)
   const included = new Set(settings.included_milestones)
   const weightByConfidence = settings.weight_by_confidence !== false
 
@@ -97,6 +131,7 @@ export function computeAutoProjections(
 
 export function computeManualProjections(
   pipelineLoans: PipelineLoan[],
+  closedLoans: ClosedLoan[],
   overrides: ProjectionOverride[],
   months: string[],
 ): Record<string, MonthProjection> {
@@ -104,6 +139,7 @@ export function computeManualProjections(
   for (const m of months) {
     result[m] = { month: m, label: monthLabel(m), loans: [], projectedFiles: 0, projectedVolume: 0, weightedVolume: 0, avgConfidence: null }
   }
+  foldInAlreadyClosedLoans(result, closedLoans, months)
   const loanById = new Map(pipelineLoans.map((l) => [l.id, l]))
   for (const ov of overrides) {
     if (!ov.included) continue
