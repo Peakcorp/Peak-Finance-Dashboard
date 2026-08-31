@@ -177,6 +177,17 @@ export function isStalePipelineRow(fields: Pick<ParsedLoanFields, 'current_miles
   )
 }
 
+// A pipeline row already at Completion has, in effect, closed — it isn't "active pipeline"
+// anymore and would double-count against the real closed-loan figures. Excluded on every
+// seed/upload; see also isStalePipelineRow above for the separate abandoned-file rule.
+export function isCompletionMilestone(fields: Pick<ParsedLoanFields, 'current_milestone'>): boolean {
+  return fields.current_milestone === 'Completion'
+}
+
+export function shouldExcludeFromPipeline(fields: Pick<ParsedLoanFields, 'current_milestone' | 'date_file_started'>): boolean {
+  return isCompletionMilestone(fields) || isStalePipelineRow(fields)
+}
+
 // ---------- Formatting ----------
 
 const numberFmt = new Intl.NumberFormat('en-US')

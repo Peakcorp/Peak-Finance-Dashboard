@@ -9,7 +9,7 @@ dotenv.config({ path: '.env.local' })
 import path from 'path'
 import * as XLSX from 'xlsx'
 import { createClient } from '@supabase/supabase-js'
-import { parseClosedLoanRow, parseLoanRow, isStalePipelineRow, STALE_PIPELINE_CUTOFF_DATE, type RawEncompassRow } from '../lib/dataUtils'
+import { parseClosedLoanRow, parseLoanRow, isCompletionMilestone, isStalePipelineRow, shouldExcludeFromPipeline, STALE_PIPELINE_CUTOFF_DATE, type RawEncompassRow } from '../lib/dataUtils'
 
 const BATCH_SIZE = 100
 
@@ -92,10 +92,13 @@ async function main() {
 
     const rawRows = XLSX.utils.sheet_to_json<RawEncompassRow>(tableSheet, { defval: null })
     const parsedRows = rawRows.map((r) => parseLoanRow(r))
+    const completionCount = parsedRows.filter((r) => isCompletionMilestone(r)).length
     const staleCount = parsedRows.filter((r) => isStalePipelineRow(r)).length
-    const pipelineRows = parsedRows.filter((r) => !isStalePipelineRow(r)).map((r) => ({ ...r, upload_id: upload.id }))
+    const pipelineRows = parsedRows.filter((r) => !shouldExcludeFromPipeline(r)).map((r) => ({ ...r, upload_id: upload.id }))
     pipelineCount = pipelineRows.length
-    console.log(`Table sheet: ${rawRows.length} total rows, ${staleCount} excluded as stale (non-Completion, started before ${STALE_PIPELINE_CUTOFF_DATE}), ${pipelineCount} will be seeded as pipeline.`)
+    console.log(
+      `Table sheet: ${rawRows.length} total rows, ${completionCount} excluded as already-Completion, ${staleCount} excluded as stale (non-Completion, started before ${STALE_PIPELINE_CUTOFF_DATE}), ${pipelineCount} will be seeded as pipeline.`,
+    )
 
     const numBatches = Math.ceil(pipelineRows.length / BATCH_SIZE)
     for (let i = 0; i < numBatches; i++) {
