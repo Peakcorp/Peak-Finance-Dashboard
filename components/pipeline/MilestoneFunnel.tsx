@@ -35,15 +35,9 @@ export function MilestoneFunnel({ data, loading, activeMilestone, onSelect }: Mi
             >
               <span className="w-32 shrink-0 truncate text-xs text-ink-muted">{f.milestone}</span>
               <div className="h-5 flex-1 rounded bg-slate-100">
-                <div
-                  className="h-5 rounded text-right text-xs leading-5 text-white"
-                  style={{ width: `${Math.max(pct, 4)}%`, background: bg }}
-                >
-                  <span className="pr-2" style={{ color: t > 0.4 ? 'white' : '#0f172a' }}>
-                    {formatNumber(f.count)}
-                  </span>
-                </div>
+                {pct > 0 && <div className="h-5 rounded" style={{ width: `${pct}%`, background: bg }} />}
               </div>
+              <span className="w-10 shrink-0 text-right text-xs text-ink-muted">{formatNumber(f.count)}</span>
             </button>
           )
         })}
